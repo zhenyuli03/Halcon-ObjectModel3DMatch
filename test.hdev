@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hdevelop file_version="1.2" halcon_version="20.11.1.0">
+<procedure name="main">
+<interface/>
+<body>
+<l>dev_close_window ()</l>
+<l>dev_open_window (0, 0, 512, 512, 'black', WindowHandle)</l>
+<l>read_image (Image, './image1.bmp')</l>
+<l>get_image_size (Image, Width, Height)</l>
+<l>convert_image_type (Image, ImageConverted, 'real')</l>
+<l>gen_image_surface_first_order (ImageSurface_X, 'real', 0, 1, 0, 0, 0, Width, Height)</l>
+<l>gen_image_surface_first_order (ImageSurface_Y, 'real', 1, 0, 0, 0, 0, Width, Height)</l>
+<c></c>
+<l>scale_image (ImageSurface_X, ImageScaled_X, 1, 0)</l>
+<l>scale_image (ImageSurface_Y, ImageScaled_Y, 1, 0)</l>
+<l>scale_image (ImageConverted, ImageScaled_Z, 1, 0)</l>
+<c></c>
+<l>compose3 (ImageScaled_X, ImageScaled_Y, ImageScaled_Z, MultiChannelImage)</l>
+<l>xyz_to_object_model_3d (ImageScaled_X, ImageScaled_Y, ImageScaled_Z, ObjectModel3D) </l>
+<c></c>
+<l>select_points_object_model_3d (ObjectModel3D, 'point_coord_z', 0.01, 9999, ObjectModel3D)</l>
+<l>visualize_object_model_3d (WindowHandle, ObjectModel3D, [], [], ['lut', 'color_attrib', 'disp_pose'], ['color1', 'coord_z', 'true'], [], [], [], PoseOut)</l>
+<c></c>
+<c>****************创建模板*********************</c>
+<l>select_points_object_model_3d (ObjectModel3D, 'point_coord_z',180, 1000, ObjectModel3DThresholdedSample)</l>
+<l>visualize_object_model_3d (WindowHandle, ObjectModel3DThresholdedSample, [], [], ['lut', 'color_attrib', 'disp_pose'], ['color1', 'coord_z', 'true'], [], [], [], PoseOut)</l>
+<l>create_surface_model (ObjectModel3DThresholdedSample, 0.03, [], [], SFM)</l>
+<c></c>
+<c></c>
+<c>*****************寻找模板**********************</c>
+<l>dev_clear_window ()</l>
+<l>read_image (Image, './image2.bmp')</l>
+<l>get_image_size (Image, Width, Height)</l>
+<l>convert_image_type (Image, ImageConverted, 'real')</l>
+<l>gen_image_surface_first_order (ImageSurface_X, 'real', 0, 1, 0, 0, 0, Width, Height)</l>
+<l>gen_image_surface_first_order (ImageSurface_Y, 'real', 1, 0, 0, 0, 0, Width, Height)</l>
+<c></c>
+<l>scale_image (ImageSurface_X, ImageScaled_X, 1, 0)</l>
+<l>scale_image (ImageSurface_Y, ImageScaled_Y, 1, 0)</l>
+<l>scale_image (ImageConverted, ImageScaled_Z, 1, 0)</l>
+<c></c>
+<l>compose3 (ImageScaled_X, ImageScaled_Y, ImageScaled_Z, MultiChannelImage)</l>
+<l>xyz_to_object_model_3d (ImageScaled_X, ImageScaled_Y, ImageScaled_Z, ObjectModel3D) </l>
+<c></c>
+<l>select_points_object_model_3d (ObjectModel3D, 'point_coord_z', 180, 2000, ObjectModel3DSelectPiont)</l>
+<l>visualize_object_model_3d (WindowHandle, ObjectModel3DSelectPiont, [], [], ['lut', 'color_attrib', 'disp_pose'], ['color1', 'coord_z', 'true'], [], [], [], PoseOut)</l>
+<c></c>
+<l>find_surface_model (SFM, ObjectModel3DSelectPiont, 0.05, 0.1, 0.2, 'true', 'num_matches', 10, Pose, Score, SurfaceMatchingResultID)</l>
+<c></c>
+<l>get_surface_matching_result (SurfaceMatchingResultID, 'sampled_scene', [], SampledScene)</l>
+<l>get_surface_matching_result (SurfaceMatchingResultID, 'key_points', [], KeyPoints)</l>
+<l>visualize_object_model_3d (WindowHandle, [ObjectModel3D,SampledScene,KeyPoints], [], [], ['color_' + [0,1,2],'point_size_' + [0,1,2]], ['gray','cyan','yellow',1.0,3.0,5.0], [], [], [], PoseOut)</l>
+<c></c>
+<l>rigid_trans_object_model_3d (ObjectModel3DThresholdedSample, Pose, ObjectModel3DRigidTrans)</l>
+<l>visualize_object_model_3d (WindowHandle, [ObjectModel3D,ObjectModel3DRigidTrans], [], [], ['color_' + [0,1],'point_size_0'], ['gray','green',1.0], [], [], [], PoseOut)</l>
+<c></c>
+</body>
+<docu id="main">
+<parameters/>
+</docu>
+</procedure>
+</hdevelop>

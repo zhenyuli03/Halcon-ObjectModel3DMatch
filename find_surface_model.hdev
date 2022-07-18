@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hdevelop file_version="1.2" halcon_version="20.11.1.0">
+<procedure name="main">
+<interface/>
+<body>
+<c>* ***********************************************************************</c>
+<c>* Example for Surface-Based 3D Matching</c>
+<c>* </c>
+<c>* This example shows Surface-Based 3D Matching on data taken with a</c>
+<c>* Time-of-flight camera (TOF/PMD).</c>
+<c>* The model for the matching is created from a reference view of the</c>
+<c>* object, i.e., no CAD model is used.</c>
+<c>* The created model is then searched for in a number of 3D scenes.</c>
+<c>* </c>
+<c>* The example demonstrates how to use the operators</c>
+<c>*   xyz_to_object_model_3d,</c>
+<c>*   create_surface_model, and</c>
+<c>*   find_surface_model.</c>
+<c>* </c>
+<c>* ***********************************************************************</c>
+<c>* </c>
+<c>* Initialization</c>
+<l>dev_update_off ()</l>
+<l>gen_empty_obj (EmptyObject)</l>
+<l>ImagePath := 'time_of_flight/'</l>
+<l>dev_close_window ()</l>
+<c>* </c>
+<c>* ***********************************************************************</c>
+<c>* Offline-Phase: Model generation from a reference XYZ Image</c>
+<c>* ***********************************************************************</c>
+<c>* </c>
+<c>* Load the XYZ images with the reference object</c>
+<l>read_image (Image, ImagePath + 'engine_cover_xyz_01')</l>
+<l>decompose3 (Image, Xm, Ym, Zm)</l>
+<c>* Remove the background plane</c>
+<l>threshold (Zm, ModelZ, 0, 650)</l>
+<c>* Find connected regions</c>
+<l>connection (ModelZ, ConnectedModel)</l>
+<c>* Select the regions for the ROI of the reference model</c>
+<l>select_obj (ConnectedModel, ModelROI, [10,9])</l>
+<l>union1 (ModelROI, ModelROI)</l>
+<c>* Create the ROI</c>
+<l>reduce_domain (Xm, ModelROI, Xm)</l>
+<c>* </c>
+<c>* Display model image and ROI</c>
+<l>dev_open_window_fit_image (Zm, 0, 0, -1, -1, WindowHandle)</l>
+<l>set_display_font (WindowHandle, 14, 'mono', 'true', 'false')</l>
+<l>dev_display (Zm)</l>
+<l>dev_set_line_width (2)</l>
+<l>dev_set_draw ('margin')</l>
+<l>dev_set_color ('green')</l>
+<l>dev_display (ModelROI)</l>
+<l>disp_message (WindowHandle, 'Create surface model from XYZ image region', 'window', 12, 12, 'black', 'true')</l>
+<l>disp_continue_message (WindowHandle, 'black', 'true')</l>
+<l>stop ()</l>
+<l>dev_clear_window ()</l>
+<c>* </c>
+<c>* Create the surface model from the reference view</c>
+<l>xyz_to_object_model_3d (Xm, Ym, Zm, ObjectModel3DModel)</l>
+<l>create_surface_model (ObjectModel3DModel, 0.03, [], [], SFM)</l>
+<c>* </c>
+<c>* Display the model</c>
+<l>Instructions[0] := 'Rotate: Left button'</l>
+<l>Instructions[1] := 'Zoom:   Shift + left button'</l>
+<l>Instructions[2] := 'Move:   Ctrl  + left button'</l>
+<c>* </c>
+<l>Message := 'Surface model'</l>
+<l>visualize_object_model_3d (WindowHandle, ObjectModel3DModel, [], [], [], [], Message, [], Instructions, PoseOut)</l>
+<c>* </c>
+<c>* ***********************************************************************</c>
+<c>* Online-Phase: Match the reference object in 3D scenes</c>
+<c>* ***********************************************************************</c>
+<c>* </c>
+<l>NumImages := 10</l>
+<l>for Index := 2 to NumImages by 1</l>
+<c>    * ***************************************</c>
+<c>    * Acquire scene</c>
+<c>    * ***************************************</c>
+<c>    * Load the XYZ Images</c>
+<l>    read_image (Image, ImagePath + 'engine_cover_xyz_' + Index$'02')</l>
+<l>    decompose3 (Image, X, Y, Z)</l>
+<c>    * Remove the background plane to increase the speed and</c>
+<c>    * robustness of the surface-based matching</c>
+<l>    threshold (Z, SceneGood, 0, 666)</l>
+<l>    reduce_domain (X, SceneGood, XReduced)</l>
+<l>    xyz_to_object_model_3d (XReduced, Y, Z, ObjectModel3DSceneReduced)</l>
+<l>    visualize_object_model_3d (WindowHandle, ObjectModel3DSceneReduced, [], PoseOut, [], [], [], [], [], PoseOut1)</l>
+<c>    * </c>
+<c>    * ***************************************</c>
+<c>    * Match: Find the reference model in the</c>
+<c>    *        3D scene</c>
+<c>    * ***************************************</c>
+<l>    count_seconds (T0)</l>
+<l>    find_surface_model (SFM, ObjectModel3DSceneReduced, 0.05, 0.3, 0.2, 'true', 'num_matches', 10, Pose, Score, SurfaceMatchingResultID)</l>
+<l>    count_seconds (T1)</l>
+<l>    TimeForMatching := (T1 - T0) * 1000</l>
+<c>    * </c>
+<c>    * ***************************************</c>
+<c>    * Display: Visualize the result(s)</c>
+<c>    * ***************************************</c>
+<c>    * Prepare the visualization of the result(s)</c>
+<l>    ObjectModel3DResult := []</l>
+<l>    for Index2 := 0 to |Score| - 1 by 1</l>
+<l>        if (Score[Index2] &lt; 0.11)</l>
+<l>            continue</l>
+<l>        endif</l>
+<l>        CPose := Pose[Index2 * 7:Index2 * 7 + 6]</l>
+<c>        * </c>
+<l>        rigid_trans_object_model_3d (ObjectModel3DModel, CPose, ObjectModel3DRigidTrans)</l>
+<l>        ObjectModel3DResult := [ObjectModel3DResult,ObjectModel3DRigidTrans]</l>
+<l>    endfor</l>
+<c>    * </c>
+<l>    xyz_to_object_model_3d (X, Y, Z, ObjectModel3DScene)</l>
+<c>    * </c>
+<c>    * Visualize matching scene and key points</c>
+<l>    Message := 'Original scene points (white)'</l>
+<l>    Message[1] := 'Sampled scene points (cyan)'</l>
+<l>    Message[2] := 'Key points (yellow)'</l>
+<l>    get_surface_matching_result (SurfaceMatchingResultID, 'sampled_scene', [], SampledScene)</l>
+<l>    get_surface_matching_result (SurfaceMatchingResultID, 'key_points', [], KeyPoints)</l>
+<l>    dev_clear_window ()</l>
+<l>    visualize_object_model_3d (WindowHandle, [ObjectModel3DScene,SampledScene,KeyPoints], [], [], ['color_' + [0,1,2],'point_size_' + [0,1,2]], ['gray','cyan','yellow',1.0,3.0,5.0], Message, [], Instructions, PoseOut)</l>
+<c>    * </c>
+<c>    * Visualize result(s)</c>
+<l>    Message := 'Scene: ' + Index</l>
+<l>    Message[1] := 'Found ' + |ObjectModel3DResult| + ' object(s) in ' + TimeForMatching$'.3' + ' ms'</l>
+<l>    ScoreString := sum(Score$'.2f' + ' / ')</l>
+<l>    Message[2] := 'Score(s): ' + ScoreString{0:strlen(ScoreString) - 4}</l>
+<l>    NumResult := |ObjectModel3DResult|</l>
+<l>    tuple_gen_const (NumResult, 'green', Colors)</l>
+<l>    tuple_gen_const (NumResult, 'circle', Shapes)</l>
+<l>    tuple_gen_const (NumResult, 3, Radii)</l>
+<l>    Indices := [1:NumResult]</l>
+<c>    * </c>
+<l>    dev_clear_window ()</l>
+<l>    visualize_object_model_3d (WindowHandle, [ObjectModel3DScene,ObjectModel3DResult], [], PoseOut, ['color_' + [0,Indices],'point_size_0'], ['gray',Colors,1.0], Message, [], Instructions, PoseOut)</l>
+<l>endfor</l>
+</body>
+<docu id="main">
+<parameters/>
+</docu>
+</procedure>
+</hdevelop>
